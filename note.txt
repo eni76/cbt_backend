@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ───────────────────────────────────────────────────────────────
+//  ENUMS
+// ───────────────────────────────────────────────────────────────
+//
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum QType {
+  MCQ
+  MULTI
+  TEXT
+  NUMERIC
+}
+
+//
+// ───────────────────────────────────────────────────────────────
+//  MODELS
+// ───────────────────────────────────────────────────────────────
+//
+
+model School {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String      @unique
+  createdAt DateTime    @default(now())
+
+  // Relationships
+  admins    User[]      @relation("SchoolAdmins")
+  students  Student[]
+  exams     Exam[]
+  payments  Payment[]
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  name      String?
+  password  String
+  role      Role       @default(STUDENT)
+  createdAt DateTime   @default(now())
+
+  // Relations
+  school    School?    @relation("SchoolAdmins", fields: [schoolId], references: [id])
+  schoolId  String?
+}
+
+model Student {
+  id         String       @id @default(uuid())
+  matricNo   String       @unique
+  name       String
+  createdAt  DateTime     @default(now())
+
+  // Relations
+  school     School       @relation(fields: [schoolId], references: [id])
+  schoolId   String
+  submissions Submission[]
+}
+
+model Exam {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  published   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  // Relations
+  school      School       @relation(fields: [schoolId], references: [id])
+  schoolId    String
+  questions   Question[]
+  submissions Submission[]
+}
+
+model Question {
+  id        String     @id @default(uuid())
+  text      String
+  type      QType      @default(MCQ)
+  mark      Float      @default(1)
+  answerKey String?    // TEXT/NUMERIC answers stored here (JSON if needed)
+
+  // Relations
+  exam      Exam       @relation(fields: [examId], references: [id])
+  examId    String
+  options   Option[]
+}
+
+model Option {
+  id         String     @id @default(uuid())
+  text       String
+  isCorrect  Boolean    @default(false)
+
+  // Relations
+  question   Question   @relation(fields: [questionId], references: [id])
+  questionId String
+}
+
+model Submission {
+  id         String   @id @default(uuid())
+  answers    Json     // {questionId: value}
+  score      Float?
+  graded     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  // Relations
+  student    Student  @relation(fields: [studentId], references: [id])
+  studentId  String
+
+  exam       Exam     @relation(fields: [examId], references: [id])
+  examId     String
+}
+
+model Payment {
+  id          String    @id @default(uuid())
+  amount      Float
+  currency    String
+  reference   String    @unique
+  status      String
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  school      School    @relation(fields: [schoolId], references: [id])
+  schoolId    String
+}

@@ -1,0 +1,12 @@
+// Example pseudo-code (Node.js/Prisma)
+const newProfile = await prisma.profile.create({
+  data: {
+    email,
+    firstname,
+    lastname,
+    password: hashedPassword,
+    role,
+    studentSchoolId: schoolId,
+    subjects: role === "STUDENT" ? { connect: subjectIds.map(id => ({ id })) } : undefined,
+  },
+});

@@ -1,12 +1,9 @@
 generator client {
     provider = "prisma-client-js"
-    // You can add output if you want:
-    // output = "../generated/prisma/client"
 }
 
 datasource db {
     provider = "postgresql"
-    url      = env("DATABASE_URL") // only for IDE linting
 }
 
 // ENUMS
@@ -30,61 +27,68 @@ enum ExamStatus {
     CLOSED
 }
 
-// SCHOOL & USERS
+// SCHOOL
 model School {
-    id        Int      @id @default(autoincrement())
-    name      String
-    slug      String   @unique
-    createdAt DateTime @default(now())
-    config    Json?
+    id          Int      @id @default(autoincrement())
+    name        String
+    slug        String   @unique
+    createdAt   DateTime @default(now())
+    email       String   @unique
+    address     String?
+    phone       String?
+    image       String? // school logo
+    description String?
+    verified    Boolean  @default(false)
+    password String
 
-    admins   User[]    @relation("SchoolAdmins")
-    teachers User[]    @relation("SchoolTeachers")
-    students Student[]
+    profiles Profile[]
     subjects Subject[]
     exams    Exam[]
     tests    Test[]
     payments Payment[]
 }
 
-model User {
-    id        Int      @id @default(autoincrement())
-    uuid      String   @unique @default(uuid())
-    email     String   @unique
-    name      String?
-    password  String
-    role      Role
-    createdAt DateTime @default(now())
-
-    adminSchoolId Int?
-    adminSchool   School? @relation("SchoolAdmins", fields: [adminSchoolId], references: [id])
-
-    teacherSchoolId Int?
-    teacherSchool   School? @relation("SchoolTeachers", fields: [teacherSchoolId], references: [id])
-
-    student      Student?
-    activityLogs ActivityLog[]
-}
-
-// STUDENTS
-model Student {
-    id        Int      @id @default(autoincrement())
-    matricNo  String   @unique
-    name      String
-    createdAt DateTime @default(now())
-
-    userId Int?  @unique
-    user   User? @relation(fields: [userId], references: [id])
+// PROFILE (Admin, Teacher, Student)
+model Profile {
+    id             Int      @id @default(autoincrement())
+    uuid           String   @unique @default(uuid())
+    email          String   @unique
+    firstname      String?
+    lastname       String?
+    password       String
+    role           Role
+    image          String? // profile image
+    identification String? // ID card / identification image
+    createdAt      DateTime @default(now())
 
     schoolId Int
     school   School @relation(fields: [schoolId], references: [id])
 
+    // Who created this profile
+    createdByAdminId Int?
+    createdByAdmin   Profile?  @relation("AdminCreatedProfiles", fields: [createdByAdminId], references: [id])
+    createdProfiles  Profile[] @relation("AdminCreatedProfiles")
+
+    createdByTeacherId Int?
+    createdByTeacher   Profile?  @relation("TeacherCreatedProfiles", fields: [createdByTeacherId], references: [id])
+    createdStudents    Profile[] @relation("TeacherCreatedProfiles")
+
+    // Subjects (for students)
+    studentSubjects Subject[] @relation("StudentSubjects")
+
+    // Exams / Tests created (if teacher)
+    createdExams    Exam[]    @relation("ExamsCreatedBy")
+    createdTests    Test[]    @relation("TestsCreatedBy")
+    createdSubjects Subject[] @relation("ProfileCreatedSubjects")
+
+    // Activity & results
+    activityLogs ActivityLog[]
     submissions  Submission[]
-    progress     Progress[]
+    progresses   Progress[]
     leaderboards Leaderboard[]
 }
 
-// SUBJECTS & EXAMS
+// SUBJECT
 model Subject {
     id        Int      @id @default(autoincrement())
     name      String
@@ -94,27 +98,33 @@ model Subject {
     schoolId Int
     school   School @relation(fields: [schoolId], references: [id])
 
+    createdById Int
+    createdBy   Profile @relation("ProfileCreatedSubjects", fields: [createdById], references: [id])
+
+    students Profile[] @relation("StudentSubjects")
+
     exams    Exam[]
     tests    Test[]
     progress Progress[]
 }
 
+// EXAM
 model Exam {
     id          Int        @id @default(autoincrement())
     title       String
     description String?
     status      ExamStatus @default(DRAFT)
-
     startTime   DateTime?
     endTime     DateTime?
     durationMin Int?
+    shuffleQ    Boolean    @default(true)
+    shuffleOpt  Boolean    @default(true)
+    maxAttempts Int        @default(1)
+    showResult  Boolean    @default(true)
+    createdAt   DateTime   @default(now())
 
-    shuffleQ    Boolean @default(true)
-    shuffleOpt  Boolean @default(true)
-    maxAttempts Int     @default(1)
-    showResult  Boolean @default(true)
-
-    createdAt DateTime @default(now())
+    createdById Int
+    createdBy   Profile @relation("ExamsCreatedBy", fields: [createdById], references: [id])
 
     schoolId Int
     school   School @relation(fields: [schoolId], references: [id])
@@ -128,22 +138,23 @@ model Exam {
     tests        Test[]
 }
 
+// TEST
 model Test {
     id          Int        @id @default(autoincrement())
     title       String
     description String?
     status      ExamStatus @default(DRAFT)
-
     startTime   DateTime?
     endTime     DateTime?
     durationMin Int?
+    maxAttempts Int        @default(1)
+    shuffleQ    Boolean    @default(true)
+    shuffleOpt  Boolean    @default(true)
+    showResult  Boolean    @default(true)
+    createdAt   DateTime   @default(now())
 
-    maxAttempts Int     @default(1)
-    shuffleQ    Boolean @default(true)
-    shuffleOpt  Boolean @default(true)
-    showResult  Boolean @default(true)
-
-    createdAt DateTime @default(now())
+    createdById Int
+    createdBy   Profile @relation("TestsCreatedBy", fields: [createdById], references: [id])
 
     schoolId Int
     school   School @relation(fields: [schoolId], references: [id])
@@ -159,7 +170,7 @@ model Test {
     leaderboards Leaderboard[]
 }
 
-// QUESTIONS & OPTIONS
+// QUESTION & OPTION
 model Question {
     id          Int    @id @default(autoincrement())
     text        String
@@ -186,7 +197,7 @@ model Option {
     question   Question @relation(fields: [questionId], references: [id])
 }
 
-// SUBMISSIONS & RESULTS
+// SUBMISSION
 model Submission {
     id        Int      @id @default(autoincrement())
     answers   Json
@@ -197,7 +208,7 @@ model Submission {
     createdAt DateTime @default(now())
 
     studentId Int
-    student   Student @relation(fields: [studentId], references: [id])
+    student   Profile @relation(fields: [studentId], references: [id])
 
     examId Int?
     exam   Exam? @relation(fields: [examId], references: [id])
@@ -206,18 +217,20 @@ model Submission {
     test   Test? @relation(fields: [testId], references: [id])
 }
 
+// PROGRESS
 model Progress {
     id       Int   @id @default(autoincrement())
     average  Float
     attempts Int
 
     studentId Int
-    student   Student @relation(fields: [studentId], references: [id])
+    student   Profile @relation(fields: [studentId], references: [id])
 
     subjectId Int
     subject   Subject @relation(fields: [subjectId], references: [id])
 }
 
+// LEADERBOARD
 model Leaderboard {
     id        Int      @id @default(autoincrement())
     score     Float
@@ -231,10 +244,10 @@ model Leaderboard {
     test   Test? @relation(fields: [testId], references: [id])
 
     studentId Int
-    student   Student @relation(fields: [studentId], references: [id])
+    student   Profile @relation(fields: [studentId], references: [id])
 }
 
-// ADMIN & AUDIT
+// ACTIVITY LOG
 model ActivityLog {
     id        Int      @id @default(autoincrement())
     action    String
@@ -242,11 +255,11 @@ model ActivityLog {
     entityId  Int
     createdAt DateTime @default(now())
 
-    userId Int
-    user   User @relation(fields: [userId], references: [id])
+    profileId Int
+    profile   Profile @relation(fields: [profileId], references: [id])
 }
 
-// PAYMENTS
+// PAYMENT
 model Payment {
     id        Int      @id @default(autoincrement())
     amount    Float

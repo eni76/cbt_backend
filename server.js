@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import { userRouter } from "./router/userRoutes.js";
+
 
 // Import routers
 
@@ -10,6 +12,7 @@ dotenv.config();
 
 // Initialize app
 const app = express();
+
 
 // Middlewares
 app.use(express.json());
@@ -30,7 +33,10 @@ app.get("/", (req, res) => {
   res.status(200).json({ message: "API is running 🚀" });
 });
 
+
+app.use('/', userRouter);
 // Routes
+
 
 // Global error handler
 app.use((err, req, res, next) => {

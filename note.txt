@@ -1,136 +1,266 @@
-generator client {
-  provider = "prisma-client-js"
-}
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-//
-// ───────────────────────────────────────────────────────────────
-//  ENUMS
-// ───────────────────────────────────────────────────────────────
-//
-
+// ENUMS
 enum Role {
-  ADMIN
-  TEACHER
-  STUDENT
+    ADMIN
+    TEACHER
+    STUDENT
 }
 
 enum QType {
-  MCQ
-  MULTI
-  TEXT
-  NUMERIC
+    MCQ
+    MULTI
+    TEXT
+    NUMERIC
 }
 
-//
-// ───────────────────────────────────────────────────────────────
-//  MODELS
-// ───────────────────────────────────────────────────────────────
-//
+enum ExamStatus {
+    DRAFT
+    SCHEDULED
+    ONGOING
+    CLOSED
+}
 
+// SCHOOL
 model School {
-  id        String     @id @default(uuid())
-  name      String
-  slug      String      @unique
-  createdAt DateTime    @default(now())
+    id          Int      @id @default(autoincrement())
+    name        String
+    slug        String   @unique
+    createdAt   DateTime @default(now())
+    email       String   @unique
+    address     String?
+    phone       String?
+    image       String? // school logo
+    description String?
+    verified    Boolean  @default(false)
+    password String
 
-  // Relationships
-  admins    User[]      @relation("SchoolAdmins")
-  students  Student[]
-  exams     Exam[]
-  payments  Payment[]
+    profiles Profile[]
+    subjects Subject[]
+    exams    Exam[]
+    tests    Test[]
+    payments Payment[]
 }
 
-model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  name      String?
-  password  String
-  role      Role       @default(STUDENT)
-  createdAt DateTime   @default(now())
+// PROFILE (Admin, Teacher, Student)
+model Profile {
+    id             Int      @id @default(autoincrement())
+    uuid           String   @unique @default(uuid())
+    email          String   @unique
+    firstname      String?
+    lastname       String?
+    password       String
+    role           Role
+    image          String? // profile image
+    identification String? // ID card / identification image
+    createdAt      DateTime @default(now())
 
-  // Relations
-  school    School?    @relation("SchoolAdmins", fields: [schoolId], references: [id])
-  schoolId  String?
+    schoolId Int
+    school   School @relation(fields: [schoolId], references: [id])
+
+    // Who created this profile
+    createdByAdminId Int?
+    createdByAdmin   Profile?  @relation("AdminCreatedProfiles", fields: [createdByAdminId], references: [id])
+    createdProfiles  Profile[] @relation("AdminCreatedProfiles")
+
+    createdByTeacherId Int?
+    createdByTeacher   Profile?  @relation("TeacherCreatedProfiles", fields: [createdByTeacherId], references: [id])
+    createdStudents    Profile[] @relation("TeacherCreatedProfiles")
+
+    // Subjects (for students)
+    studentSubjects Subject[] @relation("StudentSubjects")
+
+    // Exams / Tests created (if teacher)
+    createdExams    Exam[]    @relation("ExamsCreatedBy")
+    createdTests    Test[]    @relation("TestsCreatedBy")
+    createdSubjects Subject[] @relation("ProfileCreatedSubjects")
+
+    // Activity & results
+    activityLogs ActivityLog[]
+    submissions  Submission[]
+    progresses   Progress[]
+    leaderboards Leaderboard[]
 }
 
-model Student {
-  id         String       @id @default(uuid())
-  matricNo   String       @unique
-  name       String
-  createdAt  DateTime     @default(now())
+// SUBJECT
+model Subject {
+    id        Int      @id @default(autoincrement())
+    name      String
+    code      String
+    createdAt DateTime @default(now())
 
-  // Relations
-  school     School       @relation(fields: [schoolId], references: [id])
-  schoolId   String
-  submissions Submission[]
+    schoolId Int
+    school   School @relation(fields: [schoolId], references: [id])
+
+    createdById Int
+    createdBy   Profile @relation("ProfileCreatedSubjects", fields: [createdById], references: [id])
+
+    students Profile[] @relation("StudentSubjects")
+
+    exams    Exam[]
+    tests    Test[]
+    progress Progress[]
 }
 
+// EXAM
 model Exam {
-  id          String       @id @default(uuid())
-  title       String
-  description String?
-  published   Boolean      @default(false)
-  createdAt   DateTime     @default(now())
+    id          Int        @id @default(autoincrement())
+    title       String
+    description String?
+    status      ExamStatus @default(DRAFT)
+    startTime   DateTime?
+    endTime     DateTime?
+    durationMin Int?
+    shuffleQ    Boolean    @default(true)
+    shuffleOpt  Boolean    @default(true)
+    maxAttempts Int        @default(1)
+    showResult  Boolean    @default(true)
+    createdAt   DateTime   @default(now())
 
-  // Relations
-  school      School       @relation(fields: [schoolId], references: [id])
-  schoolId    String
-  questions   Question[]
-  submissions Submission[]
+    createdById Int
+    createdBy   Profile @relation("ExamsCreatedBy", fields: [createdById], references: [id])
+
+    schoolId Int
+    school   School @relation(fields: [schoolId], references: [id])
+
+    subjectId Int?
+    subject   Subject? @relation(fields: [subjectId], references: [id])
+
+    questions    Question[]
+    submissions  Submission[]
+    leaderboards Leaderboard[]
+    tests        Test[]
 }
 
-model Question {
-  id        String     @id @default(uuid())
-  text      String
-  type      QType      @default(MCQ)
-  mark      Float      @default(1)
-  answerKey String?    // TEXT/NUMERIC answers stored here (JSON if needed)
+// TEST
+model Test {
+    id          Int        @id @default(autoincrement())
+    title       String
+    description String?
+    status      ExamStatus @default(DRAFT)
+    startTime   DateTime?
+    endTime     DateTime?
+    durationMin Int?
+    maxAttempts Int        @default(1)
+    shuffleQ    Boolean    @default(true)
+    shuffleOpt  Boolean    @default(true)
+    showResult  Boolean    @default(true)
+    createdAt   DateTime   @default(now())
 
-  // Relations
-  exam      Exam       @relation(fields: [examId], references: [id])
-  examId    String
-  options   Option[]
+    createdById Int
+    createdBy   Profile @relation("TestsCreatedBy", fields: [createdById], references: [id])
+
+    schoolId Int
+    school   School @relation(fields: [schoolId], references: [id])
+
+    examId Int
+    exam   Exam @relation(fields: [examId], references: [id])
+
+    subjectId Int?
+    subject   Subject? @relation(fields: [subjectId], references: [id])
+
+    questions    Question[]
+    submissions  Submission[]
+    leaderboards Leaderboard[]
+}
+
+// QUESTION & OPTION
+model Question {
+    id          Int    @id @default(autoincrement())
+    text        String
+    type        QType
+    mark        Float  @default(1)
+    answerKey   Json?
+    gradingRule Json?
+
+    examId Int?
+    exam   Exam? @relation(fields: [examId], references: [id])
+
+    testId Int?
+    test   Test? @relation(fields: [testId], references: [id])
+
+    options Option[]
 }
 
 model Option {
-  id         String     @id @default(uuid())
-  text       String
-  isCorrect  Boolean    @default(false)
+    id        Int     @id @default(autoincrement())
+    text      String
+    isCorrect Boolean @default(false)
 
-  // Relations
-  question   Question   @relation(fields: [questionId], references: [id])
-  questionId String
+    questionId Int
+    question   Question @relation(fields: [questionId], references: [id])
 }
 
+// SUBMISSION
 model Submission {
-  id         String   @id @default(uuid())
-  answers    Json     // {questionId: value}
-  score      Float?
-  graded     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+    id        Int      @id @default(autoincrement())
+    answers   Json
+    score     Float?
+    graded    Boolean  @default(false)
+    breakdown Json?
+    analytics Json?
+    createdAt DateTime @default(now())
 
-  // Relations
-  student    Student  @relation(fields: [studentId], references: [id])
-  studentId  String
+    studentId Int
+    student   Profile @relation(fields: [studentId], references: [id])
 
-  exam       Exam     @relation(fields: [examId], references: [id])
-  examId     String
+    examId Int?
+    exam   Exam? @relation(fields: [examId], references: [id])
+
+    testId Int?
+    test   Test? @relation(fields: [testId], references: [id])
 }
 
-model Payment {
-  id          String    @id @default(uuid())
-  amount      Float
-  currency    String
-  reference   String    @unique
-  status      String
-  createdAt   DateTime  @default(now())
+// PROGRESS
+model Progress {
+    id       Int   @id @default(autoincrement())
+    average  Float
+    attempts Int
 
-  // Relations
-  school      School    @relation(fields: [schoolId], references: [id])
-  schoolId    String
+    studentId Int
+    student   Profile @relation(fields: [studentId], references: [id])
+
+    subjectId Int
+    subject   Subject @relation(fields: [subjectId], references: [id])
+}
+
+// LEADERBOARD
+model Leaderboard {
+    id        Int      @id @default(autoincrement())
+    score     Float
+    rank      Int
+    createdAt DateTime @default(now())
+
+    examId Int?
+    exam   Exam? @relation(fields: [examId], references: [id])
+
+    testId Int?
+    test   Test? @relation(fields: [testId], references: [id])
+
+    studentId Int
+    student   Profile @relation(fields: [studentId], references: [id])
+}
+
+// ACTIVITY LOG
+model ActivityLog {
+    id        Int      @id @default(autoincrement())
+    action    String
+    entity    String
+    entityId  Int
+    createdAt DateTime @default(now())
+
+    profileId Int
+    profile   Profile @relation(fields: [profileId], references: [id])
+}
+
+// PAYMENT
+model Payment {
+    id        Int      @id @default(autoincrement())
+    amount    Float
+    currency  String
+    reference String   @unique
+    status    String
+    createdAt DateTime @default(now())
+
+    schoolId Int
+    school   School @relation(fields: [schoolId], references: [id])
 }

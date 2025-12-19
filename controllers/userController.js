@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import pool from "../db.js"; 
+import pool from "../dase.js"; 
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 
 

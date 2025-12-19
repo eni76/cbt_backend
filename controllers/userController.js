@@ -5,6 +5,7 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import pool from "../dase.js"; 
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+import { log } from "console";
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
@@ -28,6 +29,7 @@ export const registerSchool = async (req, res) => {
   try {
     const { email, password, confirmpassword, name, description, phone, address } = req.body;
 
+    console.log("req.body:", req.body);
     // Check missing fields
     for (const [key, val] of Object.entries(req.body)) {
       if (!val) return res.status(400).json({ message: `${key} is required!` });

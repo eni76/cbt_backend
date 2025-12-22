@@ -31,10 +31,6 @@ app.use(
 );
 
 // Test route
-app.get("/", (req, res) => {
-  res.status(200).json({ message: "API is running 🚀" });
-});
-
 
 app.use('/', userRouter);
 // Routes

@@ -45,12 +45,10 @@ export const registerSchool = async (req, res) => {
     // 2️⃣ Password validation
     const passwordRegex = /^[A-Z](?=.*[\W_])/;
     if (!passwordRegex.test(password))
-      return res
-        .status(400)
-        .json({
-          message:
-            "Password must start with a capital letter and contain at least one special character.",
-        });
+      return res.status(400).json({
+        message:
+          "Password must start with a capital letter and contain at least one special character.",
+      });
 
     if (password !== confirmpassword)
       return res.status(400).json({ message: "Passwords do not match!" });
@@ -128,13 +126,19 @@ export const login = async (req, res) => {
     });
 
     // Send token via HTTP-only cookie
-    res.cookie("token", token, {
-      httpOnly: true, // Not accessible via JS
-      secure: process.env.NODE_ENV === "production", // only send over HTTPS in prod
-      sameSite: "Strict", // adjust based on frontend/backend setup
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    res.clearCookie("auth_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      path: "/",
     });
 
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      expires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
+    })
     // Send user info separately
     res.status(200).json({
       user: {

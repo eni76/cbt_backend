@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import { userRouter } from "./router/userRoutes.js";
+import cookieParser from "cookie-parser";
 
 
 // Import routers
@@ -15,8 +16,9 @@ const app = express();
 
 
 // Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser())
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 app.use(
   cors({

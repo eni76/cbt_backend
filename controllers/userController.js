@@ -3,9 +3,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import pool from "../dase.js"; 
+import pool from "../dase.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
-
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
@@ -25,16 +24,18 @@ const transporter = nodemailer.createTransport({
 // REGISTER SCHOOL
 // ============================
 
-
-
-
-
-
-
 export const registerSchool = async (req, res) => {
   const client = await pool.connect(); // get a client from the pool
   try {
-    const { email, password, confirmpassword, name, description, phone, address } = req.body;
+    const {
+      email,
+      password,
+      confirmpassword,
+      name,
+      description,
+      phone,
+      address,
+    } = req.body;
 
     // 1️⃣ Validate required fields
     for (const [key, val] of Object.entries(req.body)) {
@@ -44,7 +45,12 @@ export const registerSchool = async (req, res) => {
     // 2️⃣ Password validation
     const passwordRegex = /^[A-Z](?=.*[\W_])/;
     if (!passwordRegex.test(password))
-      return res.status(400).json({ message: "Password must start with a capital letter and contain at least one special character." });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Password must start with a capital letter and contain at least one special character.",
+        });
 
     if (password !== confirmpassword)
       return res.status(400).json({ message: "Passwords do not match!" });
@@ -52,7 +58,11 @@ export const registerSchool = async (req, res) => {
     // 3️⃣ Handle image upload (optional)
     let imageUrl = null;
     if (req.file) {
-      imageUrl = await uploadToCloudinary(req.file.buffer, "image", "school_images");
+      imageUrl = await uploadToCloudinary(
+        req.file.buffer,
+        "image",
+        "school_images"
+      );
     }
 
     // 4️⃣ Check if email already exists
@@ -96,7 +106,6 @@ export const registerSchool = async (req, res) => {
   }
 };
 
-
 // ============================
 // LOGIN
 // ============================
@@ -104,7 +113,9 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const result = await pool.query("SELECT * FROM school WHERE email=$1", [email]);
+    const result = await pool.query("SELECT * FROM school WHERE email=$1", [
+      email,
+    ]);
     const user = result.rows[0];
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -112,15 +123,26 @@ export const login = async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
+    // Send token via HTTP-only cookie
+    res.cookie("token", token, {
+      httpOnly: true, // Not accessible via JS
+      secure: process.env.NODE_ENV === "production", // only send over HTTPS in prod
+      sameSite: "Strict", // adjust based on frontend/backend setup
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Send user info separately
     res.status(200).json({
-      token,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
       },
+      message: "Login successful",
     });
   } catch (err) {
     console.error(err);
@@ -180,12 +202,17 @@ export const recoverAccount = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const result = await pool.query("SELECT * FROM school WHERE email=$1", [email]);
+    const result = await pool.query("SELECT * FROM school WHERE email=$1", [
+      email,
+    ]);
     const user = result.rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const recoveryToken = crypto.randomBytes(32).toString("hex");
-    await pool.query("UPDATE school SET recovery_token=$1 WHERE id=$2", [recoveryToken, user.id]);
+    await pool.query("UPDATE school SET recovery_token=$1 WHERE id=$2", [
+      recoveryToken,
+      user.id,
+    ]);
 
     const recoverLink = `${CLIENT_URL}/recover/${recoveryToken}`;
     await transporter.sendMail({
@@ -213,12 +240,20 @@ export const resetPassword = async (req, res) => {
     const { newPassword } = req.body;
 
     if (!newPassword || newPassword.length < 6)
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
 
-    const result = await pool.query("SELECT * FROM school WHERE recovery_token=$1", [token]);
+    const result = await pool.query(
+      "SELECT * FROM school WHERE recovery_token=$1",
+      [token]
+    );
     const user = result.rows[0];
 
-    if (!user) return res.status(400).json({ message: "Invalid or expired recovery token" });
+    if (!user)
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired recovery token" });
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await pool.query(

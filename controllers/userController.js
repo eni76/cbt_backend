@@ -84,6 +84,7 @@ export const registerSchool = async (req, res) => {
     ]);
 
     res.status(201).json({
+      success: true,
       message: "School registered successfully.",
       data: rows[0],
     });

@@ -50,10 +50,11 @@ export const registerSchool = async (req, res) => {
     }
 
     // Check if school exists
+    console.log("Before DB check");
     const existingSchool = await pool.query("SELECT * FROM school WHERE email=$1", [email]);
     if (existingSchool.rows.length > 0)
       return res.status(400).json({ message: "Email already registered" });
-
+console.log("After DB check");
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 

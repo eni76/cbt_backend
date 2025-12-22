@@ -5,7 +5,6 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import pool from "../dase.js"; 
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
-import { log } from "console";
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";

@@ -25,55 +25,77 @@ const transporter = nodemailer.createTransport({
 // ============================
 // REGISTER SCHOOL
 // ============================
+
+
+
+
+
+
+
 export const registerSchool = async (req, res) => {
+  const client = await pool.connect(); // get a client from the pool
   try {
     const { email, password, confirmpassword, name, description, phone, address } = req.body;
 
-    console.log("req.body:", req.body);
-    // Check missing fields
+    // 1️⃣ Validate required fields
     for (const [key, val] of Object.entries(req.body)) {
       if (!val) return res.status(400).json({ message: `${key} is required!` });
     }
 
-    // Password validation
+    // 2️⃣ Password validation
     const passwordRegex = /^[A-Z](?=.*[\W_])/;
     if (!passwordRegex.test(password))
-      return res.status(400).json({ message: "Wrong password format!" });
+      return res.status(400).json({ message: "Password must start with a capital letter and contain at least one special character." });
 
     if (password !== confirmpassword)
       return res.status(400).json({ message: "Passwords do not match!" });
 
-    // Check for image upload
+    // 3️⃣ Handle image upload (optional)
     let imageUrl = null;
     if (req.file) {
-      imageUrl = await uploadToCloudinary(req.file.buffer, "image", "user_images");
+      imageUrl = await uploadToCloudinary(req.file.buffer, "image", "school_images");
     }
 
-    // Check if school exists
-    console.log("Before DB check");
-    const existingSchool = await pool.query("SELECT * FROM school WHERE email=$1", [email]);
-    if (existingSchool.rows.length > 0)
+    // 4️⃣ Check if email already exists
+    const { rows: existingRows } = await client.query(
+      "SELECT 1 FROM school WHERE email = $1",
+      [email]
+    );
+    if (existingRows.length > 0) {
       return res.status(400).json({ message: "Email already registered" });
-console.log("After DB check");
-    // Hash password
+    }
+
+    // 5️⃣ Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new school
-    const result = await pool.query(
-      `INSERT INTO school (email, password, name, image, description, phone, address) 
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [email, hashedPassword, name, imageUrl, description, phone, address]
-    );
+    // 6️⃣ Insert new school
+    const insertQuery = `
+      INSERT INTO school (email, password, name, image, description, phone, address)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, email, name, image, description, phone, address
+    `;
+    const { rows } = await client.query(insertQuery, [
+      email,
+      hashedPassword,
+      name,
+      imageUrl,
+      description,
+      phone,
+      address,
+    ]);
 
     res.status(201).json({
       message: "School registered successfully.",
-      data: result.rows[0],
+      data: rows[0],
     });
   } catch (err) {
-    console.error(err);
+    console.error("Register school error:", err);
     res.status(500).json({ message: "Server error" });
+  } finally {
+    client.release(); // release client back to pool
   }
 };
+
 
 // ============================
 // LOGIN

@@ -133,12 +133,12 @@ export const login = async (req, res) => {
       path: "/",
     });
 
-    res.cookie('auth_token', token, {
+    res.cookie("auth_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      expires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
-      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
-    })
+      secure: false, // disable secure on localhost
+      sameSite: "Lax",
+      expires: new Date(Date.now() + 2 * 60 * 60 * 1000),
+    });
     // Send user info separately
     res.status(200).json({
       user: {

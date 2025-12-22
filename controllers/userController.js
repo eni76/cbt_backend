@@ -125,21 +125,17 @@ export const login = async (req, res) => {
       expiresIn: "7d",
     });
 
-    // Send token via HTTP-only cookie
-    res.clearCookie("auth_token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-      path: "/",
-    });
+    // Determine cookie settings based on environment
+    const isProduction = process.env.NODE_ENV === "production";
 
     res.cookie("auth_token", token, {
-      httpOnly: true,
-      secure: false, // disable secure on localhost
-      sameSite: "Lax",
-      expires: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      httpOnly: true, // prevents JS access
+      secure: isProduction, // true in production, false locally
+      sameSite: isProduction ? "None" : "Lax", // None for cross-site in prod
+      expires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
+      path: "/", // cookie available for all routes
     });
-    // Send user info separately
+
     res.status(200).json({
       user: {
         id: user.id,

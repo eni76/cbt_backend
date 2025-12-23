@@ -5,6 +5,8 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import pool from "../dase.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+import { generalMails } from "../config/email.js";
+import e from "express";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
@@ -90,6 +92,43 @@ export const registerSchool = async (req, res) => {
       phone,
       address,
     ]);
+
+    const token = jwt.sign(
+      { id: rows[0].id, email: rows[0].email },
+      JWT_SECRET,
+      {
+        expiresIn: "10m",
+      }
+    );
+
+    const verificationLink = `${process.env.FRONTEND_URL}/verifyemail/${token}`;
+
+    const message = `<p>Hi <b>${name}</b>,</p>
+    <p>Welcome to Cbt We're excited to have you on board.</p>
+<a href="${verificationLink}" 
+   style="
+     display: inline-block;
+     padding: 12px 24px;
+     font-size: 16px;
+     color: #ffffff;
+     background-color: #007bff;
+     text-decoration: none;
+     border-radius: 6px;
+     font-weight: bold;
+   ">
+   Verify Email
+</a>
+    <p>Your account has been successfully created with the following details:</p><br>
+    <ul>
+      <li><strong>Name:</strong> ${name}</li>
+      <li><strong>Email:</strong> ${email}</li>
+      <li><strong>Phone:</strong> ${phone}</li>
+      <li><strong>Description:</strong> ${description}</li>
+      <li><strong>Address:</strong> ${address}</li>
+    </ul>`;
+
+    // Send welcome email
+    await generalMails(email, message);
 
     res.status(201).json({
       success: true,

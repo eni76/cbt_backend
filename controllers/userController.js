@@ -191,6 +191,13 @@ export const login = async (req, res) => {
 
       // Send welcome email
       await generalMails(email, message);
+
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Email not verified. Verification email sent.",
+        });
     }
 
     // Determine cookie settings based on environment
@@ -336,7 +343,6 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
@@ -388,7 +394,6 @@ export const verifyEmail = async (req, res) => {
       success: true,
       message: "Email verified successfully",
     });
-
   } catch (error) {
     console.error("Verify email error:", error);
 
@@ -405,4 +410,3 @@ export const verifyEmail = async (req, res) => {
     });
   }
 };
-

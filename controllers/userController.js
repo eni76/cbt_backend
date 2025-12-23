@@ -164,6 +164,35 @@ export const login = async (req, res) => {
       expiresIn: "7d",
     });
 
+    // Send verification email if not verified
+    if (!user.verified) {
+      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
+        expiresIn: "10m",
+      });
+
+      const verificationLink = `${process.env.FRONTEND_URL}/verifyemail/${token}`;
+
+      const message = `<p>Hi <b>${user.name}</b>,</p>
+    <p>The email ${user.email} has not been verified. Click on the link belkow to verify.</p>
+<a href="${verificationLink}" 
+   style="
+     display: inline-block;
+     padding: 12px 24px;
+     font-size: 16px;
+     color: #ffffff;
+     background-color: #007bff;
+     text-decoration: none;
+     border-radius: 6px;
+     font-weight: bold;
+   ">
+   Verify Email
+</a>
+   `;
+
+      // Send welcome email
+      await generalMails(email, message);
+    }
+
     // Determine cookie settings based on environment
     const isProduction = process.env.NODE_ENV === "production";
 
@@ -306,3 +335,74 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+export const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Verification token is required",
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Find user
+    const userResult = await pool.query(
+      `SELECT id, verified FROM school WHERE email = $1`,
+      [decoded.email]
+    );
+
+    if (userResult.rowCount === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification link",
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    // Prevent re-verification
+    if (user.verified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already verified",
+      });
+    }
+
+    // ✅ Update ONLY this user
+    await pool.query(
+      `
+      UPDATE school
+      SET verified = TRUE
+      WHERE id = $1
+      `,
+      [user.id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+    });
+
+  } catch (error) {
+    console.error("Verify email error:", error);
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(400).json({
+        success: false,
+        message: "Verification link has expired",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while verifying email",
+    });
+  }
+};
+

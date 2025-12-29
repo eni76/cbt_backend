@@ -320,7 +320,10 @@ export const recoverAccount = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
-    const { password } = req.body;
+    const { password, confirmPassword } = req.body;
+    if(password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
 
     // Verify the JWT
     let payload;

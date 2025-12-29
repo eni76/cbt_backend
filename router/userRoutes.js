@@ -6,5 +6,5 @@ userRouter.post("/register", uploads.single("image"), registerSchool);
 userRouter.post("/login", login);
 userRouter.post("/verifyemail/:token", verifyEmail);
 userRouter.post("/recoveraccount", recoverAccount);
-userRouter.post("/resetpassword/:token", recoverAccount);
+userRouter.post("/resetpassword/:token", resetpassword);
 export { userRouter };

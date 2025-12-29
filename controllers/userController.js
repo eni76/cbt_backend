@@ -315,6 +315,7 @@ export const resetPassword = async (req, res) => {
     const { password, confirmPassword } = req.body;
 
     console.log("req.body:", req.body);
+    console.log("token:", token);
     
     if(password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });

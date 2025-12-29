@@ -7,6 +7,7 @@ import pool from "../dase.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 import { generalMails } from "../config/email.js";
 import e from "express";
+import path from "path";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
@@ -200,15 +201,19 @@ export const login = async (req, res) => {
         });
     }
 
-    // Determine cookie settings based on environment
-    const isProduction = process.env.NODE_ENV === "production";
+    res.clearCookie("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      path: '/',
+    }); // Clear existing cookie if any
+
 
     res.cookie("auth_token", token, {
       httpOnly: true, // prevents JS access
-      secure: isProduction, // true in production, false locally
-      sameSite: isProduction ? "None" : "Lax", // None for cross-site in prod
+      secure: process.env.NODE_ENV === "production", // true in production, false locally
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // None for cross-site in prod
       expires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
-      path: "/", // cookie available for all routes
     });
 
     res.status(200).json({

@@ -320,28 +320,23 @@ export const recoverAccount = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
-    const { newPassword } = req.body;
+    const { password } = req.body;
 
-    if (!newPassword || newPassword.length < 6)
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters" });
+    // Verify the JWT
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
 
-    const result = await pool.query(
-      "SELECT * FROM school WHERE recovery_token=$1",
-      [token]
-    );
-    const user = result.rows[0];
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (!user)
-      return res
-        .status(400)
-        .json({ message: "Invalid or expired recovery token" });
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Update user password in DB
     await pool.query(
-      "UPDATE school SET password=$1, recovery_token=NULL WHERE id=$2",
-      [hashedPassword, user.id]
+      "UPDATE school SET password=$1 WHERE id=$2",
+      [hashedPassword, payload.id]
     );
 
     res.status(200).json({ message: "Password reset successfully" });
@@ -350,6 +345,8 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
 
 export const verifyEmail = async (req, res) => {
   try {

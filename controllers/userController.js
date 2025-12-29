@@ -295,7 +295,7 @@ export const recoverAccount = async (req, res) => {
     <p>Click the link below to reset your password:</p>
     <a href="${recoverLink}">Reset Password</a>`;
 
-    generalMails(email, message, subject = "Recover Your Account");
+    generalMails(email, message, "Recover Your Account");
 
     res.status(200).json({
       message: "If this email exists, a recovery link has been sent",

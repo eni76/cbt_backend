@@ -290,15 +290,7 @@ export const recoverAccount = async (req, res) => {
 
     const recoverLink = `${process.env.FRONTEND_URL}/verifyemail/${recoveryToken}`;
 
-    await transporter.sendMail({
-      from: `"CBT System" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: "Recover Your Account",
-      html: `<p>Hi ${user.name},</p>
-             <p>Click here to reset your password:</p>
-             <a href="${recoverLink}">Reset Password</a>`,
-    });
-
+ 
     const message = `<p>Hi <b>${user.name}</b>,</p>
     <p>Click the link below to reset your password:</p>
     <a href="${recoverLink}">Reset Password</a>`;

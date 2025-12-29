@@ -288,7 +288,7 @@ export const recoverAccount = async (req, res) => {
       { expiresIn: "2h" }
     );
 
-    const recoverLink = `${process.env.FRONTEND_URL}/forgotpassword/${recoveryToken}`;
+    const recoverLink = `${process.env.FRONTEND_URL}/resetpassword/${recoveryToken}`;
 
  
     const message = `<p>Hi <b>${user.name}</b>,</p>

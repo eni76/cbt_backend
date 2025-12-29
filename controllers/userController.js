@@ -209,6 +209,8 @@ export const login = async (req, res) => {
       },
       message: "Login successful",
     });
+
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -263,23 +265,31 @@ export const deleteUser = async (req, res) => {
 // ============================
 // RECOVER ACCOUNT
 // ============================
+
+
 export const recoverAccount = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const result = await pool.query("SELECT * FROM school WHERE email=$1", [
-      email,
-    ]);
+    const result = await pool.query("SELECT * FROM school WHERE email=$1", [email]);
     const user = result.rows[0];
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    const recoveryToken = crypto.randomBytes(32).toString("hex");
-    await pool.query("UPDATE school SET recovery_token=$1 WHERE id=$2", [
-      recoveryToken,
-      user.id,
-    ]);
+    // Always respond the same way for security
+    if (!user) {
+      return res.status(200).json({
+        message: "If this email exists, a recovery link has been sent",
+      });
+    }
 
-    const recoverLink = `${CLIENT_URL}/recover/${recoveryToken}`;
+    // Generate a JWT token that expires quickly (e.g., 10 minutes)
+    const recoveryToken = jwt.sign(
+      { id: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    const recoverLink = `${process.env.FRONTEND_URL}/verifyemail/${recoveryToken}`;
+
     await transporter.sendMail({
       from: `"CBT System" <${process.env.SMTP_USER}>`,
       to: email,
@@ -289,7 +299,15 @@ export const recoverAccount = async (req, res) => {
              <a href="${recoverLink}">Reset Password</a>`,
     });
 
-    res.status(200).json({ message: "Recovery email sent" });
+    const message = `<p>Hi <b>${user.name}</b>,</p>
+    <p>Click the link below to reset your password:</p>
+    <a href="${recoverLink}">Reset Password</a>`;
+
+    generalMails(email, message, subject = "Recover Your Account");
+
+    res.status(200).json({
+      message: "If this email exists, a recovery link has been sent",
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

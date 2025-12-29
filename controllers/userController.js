@@ -9,7 +9,7 @@ import { generalMails } from "../config/email.js";
 import e from "express";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
 // Email transporter
 const transporter = nodemailer.createTransport({
@@ -81,7 +81,7 @@ export const registerSchool = async (req, res) => {
     const insertQuery = `
       INSERT INTO school (email, password, name, image, description, phone, address)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, email, name, image, description, phone, address
+      RETURNING  id, email, name, image, description, phone, address
     `;
     const { rows } = await client.query(insertQuery, [
       email,
@@ -192,12 +192,10 @@ export const login = async (req, res) => {
       // Send welcome email
       await generalMails(email, message);
 
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Email not verified. Verification email sent.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Email not verified. Verification email sent.",
+      });
     }
 
     // Determine cookie settings based on environment
@@ -205,8 +203,11 @@ export const login = async (req, res) => {
 
     res.cookie("auth_token", token, {
       httpOnly: true, // prevents JS access
-      secure: isProduction, // true in production, false locally
-      sameSite: isProduction ? "None" : "Lax", // None for cross-site in prod
+      // secure: isProduction, // true in production, false locally
+      // sameSite: isProduction ? "None" : "Lax", // None for cross-site in prod
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
       expires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
       path: "/", // cookie available for all routes
     });

@@ -192,10 +192,12 @@ export const login = async (req, res) => {
       // Send welcome email
       await generalMails(email, message);
 
-      return res.status(400).json({
-        success: false,
-        message: "Email not verified. Verification email sent.",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Email not verified. Verification email sent.",
+        });
     }
 
     // Determine cookie settings based on environment
@@ -203,11 +205,8 @@ export const login = async (req, res) => {
 
     res.cookie("auth_token", token, {
       httpOnly: true, // prevents JS access
-      // secure: isProduction, // true in production, false locally
-      // sameSite: isProduction ? "None" : "Lax", // None for cross-site in prod
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: isProduction, // true in production, false locally
+      sameSite: isProduction ? "None" : "Lax", // None for cross-site in prod
       expires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
       path: "/", // cookie available for all routes
     });

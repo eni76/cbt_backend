@@ -285,7 +285,7 @@ export const recoverAccount = async (req, res) => {
     const recoveryToken = jwt.sign(
       { id: user.id, email: user.email },
       JWT_SECRET,
-      { expiresIn: "10m" }
+      { expiresIn: "2h" }
     );
 
     const recoverLink = `${process.env.FRONTEND_URL}/verifyemail/${recoveryToken}`;

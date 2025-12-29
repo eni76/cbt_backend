@@ -193,30 +193,15 @@ export const login = async (req, res) => {
       // Send welcome email
       await generalMails(email, message);
 
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Email not verified. Verification email sent.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Email not verified. Verification email sent.",
+      });
     }
 
-    res.clearCookie("auth_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-      path: '/',
-    }); // Clear existing cookie if any
-
-
-    res.cookie("auth_token", token, {
-      httpOnly: true, // prevents JS access
-      secure: process.env.NODE_ENV === "production", // true in production, false locally
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // None for cross-site in prod
-      expires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
-    });
-
     res.status(200).json({
+      success: true,
+      token,
       user: {
         id: user.id,
         email: user.email,

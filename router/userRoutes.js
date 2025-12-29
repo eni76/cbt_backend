@@ -7,5 +7,5 @@ userRouter.post("/login", login);
 userRouter.post("/verifyemail/:token", verifyEmail);
 userRouter.post("/recoveraccount", recoverAccount);
 userRouter.post("/resetpassword/:token", resetPassword);
-userRouter.post("/resetpassword/:token", resetPassword);
+
 export { userRouter };
